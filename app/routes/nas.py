@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 import time
 import datetime
 import subprocess
@@ -29,7 +30,22 @@ async def handle_alert(
     request: SlackRequest,
     background_task: BackgroundTasks
 ):
-    date = datetime.now()
+    date = datetime.datetime.now()
+
+    try:
+        file_size = Path("./alert_log.log").stat().st_size
+        if file_size > 1000000:
+            with open("./alert_log.log", "w") as f:
+                f.write("")
+    except FileNotFoundError:
+        logger.info("No alert log file.")
+    except PermissionError:
+        logger.info("No alert log file permission.")
+
+    with open('./alert_log.log', "a") as f:
+        f.write("\n")
+        f.write(f'{time.strftime("%H:%M:%S")}:\n')
+        f.write(request.text)
 
     parsed = request.text.split("\n", 1)[1]
     parsed = parsed.replace("\n", "")
