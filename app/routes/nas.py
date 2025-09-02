@@ -17,57 +17,67 @@ router = APIRouter(
 class SlackRequest(BaseModel):
     text: str
 
-def power_off():
+def power_off() -> None:
     out = subprocess.run(["/usr/bin/ipmitool", "-H", settings.IPMI_IP, "-U", settings.IPMI_USER, "-L", "OPERATOR", "-P", settings.IPMI_PASSWORD, "power", "soft"], capture_output=True)
-    logger.info(out)
+    logger.info(out.stderr)
 
-def power_on():
+def power_on() -> None:
     out = subprocess.run(["/usr/bin/ipmitool", "-H", settings.IPMI_IP, "-U", settings.IPMI_USER, "-L", "OPERATOR", "-P", settings.IPMI_PASSWORD, "power", "on"], capture_output=True)
-    logger.info(out)
+    logger.info(out.stderr)
+
+def alert_handler(alert: str) -> None:
+    date = datetime.datetime.now()
+
+    if settings.LOG_ALERTS:
+        try:
+            file_size = Path("./alert_log.log").stat().st_size
+            if file_size > 1000000:
+                with open("./alert_log.log", "w") as f:
+                    f.write("")
+        except FileNotFoundError:
+            logger.info("No alert log file.")
+        except PermissionError:
+            logger.info("No alert log file permission.")
+
+        with open('./alert_log.log', "a") as f:
+            f.write("\n")
+            f.write(f'{time.strftime("%H:%M:%S")}:\n')
+            f.write(alert)
+
+    text = alert.replace(" ", "")
+    text = text.replace("*", "")
+    text = text.lower()
+
+    parsed = text.split("\n")
+
+    for n in parsed:
+        if "thefollowingalerthasbeencleared" in n:
+            break
+
+        if "currentalerts" in n:
+            break
+
+        if f'replication"{settings.REPLICATION_NAME.lower().replace(" ", "")}"succeeded' in n:
+            off_time_string = settings.POWER_SAVING_TIME.split(":")
+            on_time_string = settings.POWER_ON_TIME.split(":")
+
+            off_time = time(off_time_string[0], off_time_string[1])
+            on_time = time(on_time_string[0], on_time_string[1])
+
+            if datetime.now().time() >= off_time and datetime.now().time < on_time and date.weekday() != settings.EXCEPTION_DAY:
+                power_off()
+                
+            break
+
+# #####################################################################
 
 @router.post("/alertservice")
 async def handle_alert(
     request: SlackRequest,
     background_task: BackgroundTasks
 ):
-    date = datetime.datetime.now()
-
-    try:
-        file_size = Path("./alert_log.log").stat().st_size
-        if file_size > 1000000:
-            with open("./alert_log.log", "w") as f:
-                f.write("")
-    except FileNotFoundError:
-        logger.info("No alert log file.")
-    except PermissionError:
-        logger.info("No alert log file permission.")
-
-    with open('./alert_log.log', "a") as f:
-        f.write("\n")
-        f.write(f'{time.strftime("%H:%M:%S")}:\n')
-        f.write(request.text)
-
-    parsed = request.text.split("\n", 1)[1]
-    parsed = parsed.replace("\n", "")
-    parsed = parsed.replace("*", "")
-    parsed = parsed.replace(" ", "")
-    parsed = parsed.split(":")
-    final = []
-    for n in parsed:
-        result = n.split(".")
-
-        for y in result:
-            final.append(y)
-
-    # sanity check that alert starts with "New alert"
-    if final[0] == "Newalert":
-        # check if new alert is about completion of the replication task
-        if final[1] == f'Replication"{settings.REPLICATION_NAME.replace(" ", "")}"succeeded':
-            # check the time
-            if time.strftime("%H:%M") >= settings.POWER_SAVING_TIME and time.strftime("%H:%M") < settings.POWER_ON_TIME:
-                if date.weekday() != settings.EXCEPTION_DAY:
-                    # turn of server in the background
-                    background_task.add_task(power_off, settings)
+    background_task.add_task(alert_handler, settings)
+    
 
 @router.get("/power/state")
 async def get_power_state():

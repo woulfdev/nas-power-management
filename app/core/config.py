@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    APP_VERSION: str = "0.0.0"
+    APP_VERSION: str = "0.0.1"
 
     ADMIN_PIN: int = 1234
 
@@ -10,6 +10,9 @@ class Settings(BaseSettings):
 
     REPLICATION_NAME: str
     """The name of the TrueNAS replication task to look for. Must be exactly the same as in TrueNAS."""
+
+    LOG_ALERTS: bool = False
+    LOG_DEBUG: bool = False
 
     IPMI_USER: str
     IPMI_PASSWORD: str

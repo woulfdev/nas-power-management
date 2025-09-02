@@ -1,5 +1,7 @@
 import logging
 
+from app.core.config import settings
+
 log_levels = {
     "DEBUG": logging.DEBUG,
     "INFO": logging.INFO,
@@ -8,8 +10,13 @@ log_levels = {
     "CRITICAL": logging.CRITICAL
 }
 
+if settings.LOG_DEBUG:
+    log_level = logging.DEBUG
+else:
+    log_level = logging.INFO
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=log_level,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
