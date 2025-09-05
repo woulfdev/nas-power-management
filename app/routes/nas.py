@@ -76,7 +76,7 @@ async def handle_alert(
     request: SlackRequest,
     background_task: BackgroundTasks
 ):
-    background_task.add_task(alert_handler, settings)
+    background_task.add_task(alert_handler, request.text)
     
 
 @router.get("/power/state")
