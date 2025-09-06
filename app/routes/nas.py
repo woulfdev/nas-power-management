@@ -1,9 +1,9 @@
 import re
 from pathlib import Path
-import time
-import datetime
+from datetime import datetime, time
 import subprocess
 from typing import Annotated
+
 from fastapi import APIRouter, Depends, BackgroundTasks
 from pydantic import BaseModel
 
@@ -26,7 +26,7 @@ def power_on() -> None:
     logger.info(out.stderr)
 
 def alert_handler(alert: str) -> None:
-    date = datetime.datetime.now()
+    date = datetime.now()
 
     if settings.LOG_ALERTS:
         try:
