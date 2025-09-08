@@ -61,11 +61,14 @@ def alert_handler(alert: str) -> None:
             off_time_string = settings.POWER_SAVING_TIME.split(":")
             on_time_string = settings.POWER_ON_TIME.split(":")
 
-            off_time = time(off_time_string[0], off_time_string[1])
-            on_time = time(on_time_string[0], on_time_string[1])
+            off_time = time(int(off_time_string[0]), int(off_time_string[1]))
+            on_time = time(int(on_time_string[0]), int(on_time_string[1]))
 
-            if datetime.now().time() >= off_time and datetime.now().time < on_time and date.weekday() != settings.EXCEPTION_DAY:
-                power_off()
+            if datetime.now().time() >= off_time and datetime.now().time < on_time:
+                if date.weekday() != settings.EXCEPTION_DAY:
+                    power_off()
+                else :
+                    logger.debug("Power Off Exception Day")
                 
             break
 
